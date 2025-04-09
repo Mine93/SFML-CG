@@ -19,3 +19,7 @@ target_link_libraries(draw_shapes PRIVATE SFML::Graphics)
 add_executable(breakout src/breakout.cpp)
 target_compile_features(breakout PRIVATE cxx_std_17)
 target_link_libraries(breakout PRIVATE SFML::Graphics)
+
+add_executable(dasher src/dasher.cpp)
+target_compile_features(dasher PRIVATE cxx_std_17)
+target_link_libraries(dasher PRIVATE SFML::Graphics)

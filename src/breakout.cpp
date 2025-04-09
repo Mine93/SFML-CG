@@ -323,8 +323,8 @@ void handle(const sf::Event::FocusLost, State &state){
 int main()
 {
     sf::RenderWindow window (sf::VideoMode ({window_width, window_height}), window_title);
-    window.setFramerateLimit (max_frame_rate);
-    //window.setVerticalSyncEnabled(true);
+    //window.setFramerateLimit (max_frame_rate);
+    window.setVerticalSyncEnabled(true);
     window.setMinimumSize(window.getSize());
 
     State state;
