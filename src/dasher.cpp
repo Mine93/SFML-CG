@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include <cmath>
 
 const unsigned window_width = 1280;
 const unsigned window_height = 720;
