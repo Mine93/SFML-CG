@@ -5,9 +5,11 @@ const unsigned window_width = 1280;
 const unsigned window_height = 720;
 const sf::Vector2f player_scale = {10, 10};
 const char* player_sheet = "resources/full_sheet_outlined_3.png";
+const char* ghost_sheet = "resources/ghost sheet outline-white.png";
 const unsigned h_sheet = 4;
 const unsigned v_sheet = 8;
-const sf::Vector2i sprite_size = {14, 15};
+const sf::Vector2i player_sprite_size = {14, 15};
+const sf::Vector2i ghost_sprite_size = {19, 21};
 const float player_speed = 500;
 const float animation_fps_period = 1.0/5.0;
 
@@ -21,28 +23,21 @@ sf::Angle angle(sf::Vector2f p1, sf::Vector2f p2){
 
 struct After_Image{
     sf::Vector2f position;
-    sf::Vector2f origin;
-    sf::Vector2f scale;
-    sf::Texture texture;
-    sf::IntRect sprite_rect;
+    sf::Sprite* sprite;
 
-    After_Image(sf::Vector2f p, sf::Vector2f o, sf::Vector2f s, sf::Texture t, sf::IntRect r){
+    After_Image(sf::Vector2f p, sf::Vector2f o, sf::Vector2f s, sf::Texture& t, sf::IntRect r){
         position = p;
-        origin = o;
-        scale = s;
-        texture = t;
-        sprite_rect = r;
+
+        sprite = new sf::Sprite(t);
+        sprite->setTextureRect(r);
+        sprite->setScale(s);
+        sprite->setOrigin(o);
+        sprite->setPosition(position);
+        sprite->setColor(sf::Color(127, 127, 127));
     }
 
     void draw(sf::RenderWindow& window){
-        sf::Sprite sprite(texture);
-        sprite.setTextureRect(sprite_rect);
-        sprite.setScale(scale);
-        sprite.setOrigin(origin);
-        sprite.setPosition(position);
-        sprite.setColor(sf::Color(127, 127, 127));
-
-        window.draw(sprite);
+        window.draw(*sprite);
     }
 };
 
@@ -52,21 +47,29 @@ struct Player{
     sf::Vector2i size;
     sf::Vector2f scale;
     sf::Texture texture;
+    sf::Sprite* sprite;
+
     float speed;
     float time_elapsed;
     int sprite_progression;
     int sprite_direction;
     bool moving;
     bool dashing;
+
     After_Image* aftr_img;
 
     Player(){
         position = {window_width / 2, window_height / 2};
         scale = player_scale;
-        size = sprite_size;
+        size = player_sprite_size;
         origin = {static_cast<float>(size.x / 2), static_cast<float>(size.y / 2)};
+
         if(!texture.loadFromFile(player_sheet))
             exit(-1);
+        sprite = new sf::Sprite(texture);
+        sprite->setOrigin(origin);
+        sprite->setScale(scale);
+
         speed = player_speed;
         time_elapsed = 0;
         sprite_progression = 0;
@@ -80,14 +83,10 @@ struct Player{
             draw_line(window);
             aftr_img->draw(window);
         }
+        sprite->setTextureRect(get_sprite());
+        sprite->setPosition(position);
 
-        sf::Sprite sprite(texture);
-        sprite.setTextureRect(get_sprite());
-        sprite.setScale(scale);
-        sprite.setOrigin(origin);
-        sprite.setPosition(position);
-
-        window.draw(sprite);
+        window.draw(*sprite);
     }
 
     void update(float delta, sf::Vector2f movement){
@@ -139,6 +138,7 @@ struct Player{
     void stop_dash(){
         dashing = false;
         position = aftr_img->position;
+        free(aftr_img->sprite);
         free(aftr_img);
     }
 
@@ -153,7 +153,39 @@ struct Player{
     }
 };
 
+struct Ghost{
+    sf::Vector2f position;
+    sf::Vector2f origin;
+    sf::Vector2i size;
+    sf::Vector2f scale;
+    sf::Texture texture;
+    sf::Sprite* sprite;
 
+    float speed;
+    float time_elapsed;
+    int sprite_progression;
+
+    Ghost* prev_ghost;
+    Ghost* next_ghost;
+
+    Ghost(){
+        position = {window_width / 3, window_height / 3};
+        origin = {ghost_sprite_size.x / 2, ghost_sprite_size.y / 2};
+        size = ghost_sprite_size;
+        scale = player_scale;
+
+        if(!texture.loadFromFile(ghost_sheet));
+            exit(-1);
+        sprite = new sf::Sprite(texture);
+        sprite->setOrigin(origin);
+        sprite->setScale(scale);
+    }
+
+    void draw(sf::RenderWindow& window){
+        sprite->setPosition(position);
+        sprite->setTextureRect({{0, 0},size});
+    }
+};
 
 struct State{
     Player player;
@@ -251,12 +283,10 @@ int main(){
     sf::Clock delta;
 
     while (window.isOpen()){
-        // events
         window.handleEvents([&window](const sf::Event::Closed&){handle_close(window);},
                             [&window](const sf::Event::Resized& event){handle_resize(event, window);},
                             [&state] (const auto& event){handle(event, state);});
 
-        // display
         state.update(delta.restart().asSeconds());
 
         window.clear(sf::Color::Black);
