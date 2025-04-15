@@ -182,6 +182,17 @@ struct Player{
 
         position += movement * delta * speed;
     }
+
+    bool is_inside(sf::Vector2f point){
+        return (point.x >= position.x - (size.x / 2 * scale.x)) &&
+               (point.x <= position.x + (size.x / 2 * scale.x)) &&
+               (point.y >= position.y - (size.y / 2 * scale.y)) &&
+               (point.y <= position.y + (size.y / 2 * scale.y));
+    }
+
+    void hit(){
+        sprite->setColor(sf::Color::Red);
+    }
 };
 
 struct Ghost{
@@ -227,6 +238,15 @@ struct Ghost{
     void update(float delta, Player& p){
         position += sf::Vector2f(speed, angle(position, p.position)) * delta;
         anim_upd.update(delta);
+        if(player_hit(p))
+            p.hit();
+    }
+
+    bool player_hit(Player &p){
+        return (p.is_inside({position.x - (size.x / 2 * scale.x), position.y})) ||
+               (p.is_inside({position.x + (size.x / 2 * scale.x), position.y})) ||
+               (p.is_inside({position.x, position.y + (size.y / 2 * scale.y)})) ||
+               (p.is_inside({position.x, position.y - (size.y / 2 * scale.y)}));
     }
 };
 
