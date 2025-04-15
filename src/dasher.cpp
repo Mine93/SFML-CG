@@ -25,15 +25,18 @@ struct After_Image{
     sf::Vector2f position;
     sf::Sprite* sprite;
 
-    After_Image(sf::Vector2f p, sf::Vector2f o, sf::Vector2f s, sf::Texture& t, sf::IntRect r){
-        position = p;
-
+    After_Image(){}
+    After_Image(sf::Vector2f o, sf::Vector2f s, sf::Texture& t){
         sprite = new sf::Sprite(t);
-        sprite->setTextureRect(r);
         sprite->setScale(s);
         sprite->setOrigin(o);
-        sprite->setPosition(position);
         sprite->setColor(sf::Color(127, 127, 127));
+    }
+
+    void set_start(sf::IntRect r, sf::Vector2f p){
+        sprite->setTextureRect(r);
+        position = p;
+        sprite->setPosition(position);
     }
 
     void draw(sf::RenderWindow& window){
@@ -48,6 +51,7 @@ struct Animation_Updater{
     int max;
     sf::Vector2i size;
 
+    Animation_Updater(){}
     Animation_Updater(float p, int m, sf::Vector2i s){
         time_elapsed = 0;
         period = p;
@@ -78,14 +82,12 @@ struct Player{
     sf::Sprite* sprite;
 
     float speed;
-    //float time_elapsed;
-    //int sprite_progression;
     int sprite_direction;
     bool moving;
     bool dashing;
 
-    Animation_Updater* anim_upd;
-    After_Image* aftr_img;
+    Animation_Updater anim_upd;
+    After_Image aftr_img;
 
     Player(){
         position = {window_width / 2, window_height / 2};
@@ -99,7 +101,8 @@ struct Player{
         sprite->setOrigin(origin);
         sprite->setScale(scale);
 
-        anim_upd = new Animation_Updater(animation_fps_period, h_sheet, size);
+        aftr_img = After_Image(origin, scale, texture);
+        anim_upd = Animation_Updater(animation_fps_period, h_sheet, size);
 
         speed = player_speed;
         sprite_direction = 2;
@@ -110,16 +113,16 @@ struct Player{
     void draw(sf::RenderWindow& window){
         if(dashing){
             draw_line(window);
-            aftr_img->draw(window);
+            aftr_img.draw(window);
         }
-        sprite->setTextureRect(anim_upd->get_sprite(sprite_direction, moving));
+        sprite->setTextureRect(anim_upd.get_sprite(sprite_direction, moving));
         sprite->setPosition(position);
 
         window.draw(*sprite);
     }
 
     void update(float delta, sf::Vector2f movement){
-        position += movement * delta * speed;
+        move_and_collide(movement, delta);
 
         calculate_direction(movement);
         if(movement.length() != 0 && moving == false)
@@ -127,7 +130,7 @@ struct Player{
         else if(movement.length() == 0 && moving == true)
             moving = false;
 
-        anim_upd->update(delta);
+        anim_upd.update(delta);
     }
 
     void calculate_direction(sf::Vector2f vec){
@@ -149,24 +152,35 @@ struct Player{
         if(dashing) return;
 
         dashing = true;
-        aftr_img = new After_Image(position, origin, scale, texture, anim_upd->get_sprite(sprite_direction, moving));
+        aftr_img.set_start(anim_upd.get_sprite(sprite_direction, moving), position);
     }
 
     void stop_dash(){
         dashing = false;
-        position = aftr_img->position;
-        free(aftr_img->sprite);
-        free(aftr_img);
+        position = aftr_img.position;
     }
 
     void draw_line(sf::RenderWindow& window){
-        sf::RectangleShape line({dist(position, aftr_img->position), 10});
+        sf::RectangleShape line({dist(position, aftr_img.position), 10});
         line.setFillColor(sf::Color::White);
         line.setOrigin({0, 5});
         line.setPosition(position);
-        line.setRotation(angle(position, aftr_img->position));
+        line.setRotation(angle(position, aftr_img.position));
 
         window.draw(line);
+    }
+
+    void move_and_collide(sf::Vector2f movement, float delta){
+        if(position.x >= window_width - (size.x / 2 * scale.x) && movement.x > 0)
+            movement.x = 0;
+        else if(position.x <= (size.x / 2 * scale.x) && movement.x < 0)
+            movement.x = 0;
+        if(position.y >= window_height - (size.y / 2 * scale.y) && movement.y > 0)
+            movement.y = 0;
+        else if(position.y <= (size.y / 2 * scale.y) && movement.y < 0)
+            movement.y = 0;
+
+        position += movement * delta * speed;
     }
 };
 
@@ -178,7 +192,7 @@ struct Ghost{
     sf::Texture texture;
     sf::Sprite* sprite;
 
-    Animation_Updater* anim_upd;
+    Animation_Updater anim_upd;
     float speed;
 
     Ghost* prev_ghost;
@@ -197,7 +211,7 @@ struct Ghost{
         sprite->setOrigin(origin);
         sprite->setScale(scale);
 
-        anim_upd = new Animation_Updater(animation_fps_period, h_sheet, size);
+        anim_upd = Animation_Updater(animation_fps_period, h_sheet, size);
 
         prev_ghost = nullptr;
         next_ghost = nullptr;
@@ -205,14 +219,14 @@ struct Ghost{
 
     void draw(sf::RenderWindow& window){
         sprite->setPosition(position);
-        sprite->setTextureRect(anim_upd->get_sprite(0, false));
+        sprite->setTextureRect(anim_upd.get_sprite(0, false));
 
         window.draw(*sprite);
     }
 
     void update(float delta, Player& p){
-        position += sf::Vector2f(1.0, angle(position, p.position)) * delta * speed;
-        anim_upd->update(delta);
+        position += sf::Vector2f(speed, angle(position, p.position)) * delta;
+        anim_upd.update(delta);
     }
 };
 
