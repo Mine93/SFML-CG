@@ -6,6 +6,7 @@ const unsigned window_height = 720;
 const sf::Vector2f player_scale = {10, 10};
 const char* player_sheet = "resources/full_sheet_outlined_3.png";
 const char* ghost_sheet = "resources/ghost sheet outlined-white.png";
+const char* heart_sprite = "resources/heart.png";
 const unsigned h_sheet = 4;
 const unsigned v_sheet = 8;
 const sf::Vector2i player_sprite_size = {14, 15};
@@ -85,9 +86,16 @@ struct Player{
     int sprite_direction;
     bool moving;
     bool dashing;
+    bool invulnerable;
+    float inv_window;
+    bool dead;
+    bool attack;
+    bool prev_attack;
 
     Animation_Updater anim_upd;
     After_Image aftr_img;
+
+    unsigned health;
 
     Player(){
         position = {window_width / 2, window_height / 2};
@@ -108,6 +116,13 @@ struct Player{
         sprite_direction = 2;
         moving = false;
         dashing = false;
+        invulnerable = false;
+        dead = false;
+        attack = false;
+        prev_attack = false;
+
+        health = 3;
+        inv_window = 0;
     }
 
     void draw(sf::RenderWindow& window){
@@ -124,6 +139,15 @@ struct Player{
     void update(float delta, sf::Vector2f movement){
         move_and_collide(movement, delta);
 
+        if(attack){
+            if(prev_attack){
+                attack = false;
+                prev_attack = false;
+            }
+            else
+                prev_attack = true;
+        }
+
         calculate_direction(movement);
         if(movement.length() != 0 && moving == false)
             moving = true;
@@ -131,6 +155,15 @@ struct Player{
             moving = false;
 
         anim_upd.update(delta);
+
+        if(invulnerable){
+            inv_window += delta;
+            if(inv_window >= 1){
+                inv_window = 0;
+                invulnerable = false;
+                sprite->setColor(sf::Color::White);
+            }
+        }
     }
 
     void calculate_direction(sf::Vector2f vec){
@@ -149,14 +182,20 @@ struct Player{
     }
 
     void start_dash(){
-        if(dashing) return;
+        if(dashing || dead) return;
 
         dashing = true;
         aftr_img.set_start(anim_upd.get_sprite(sprite_direction, moving), position);
     }
 
     void stop_dash(){
+        if(!dashing || dead) return;
+
         dashing = false;
+        attack = true;
+    }
+
+    void successfull_dash(){
         position = aftr_img.position;
     }
 
@@ -183,15 +222,18 @@ struct Player{
         position += movement * delta * speed;
     }
 
-    bool is_inside(sf::Vector2f point){
-        return (point.x >= position.x - (size.x / 2 * scale.x)) &&
-               (point.x <= position.x + (size.x / 2 * scale.x)) &&
-               (point.y >= position.y - (size.y / 2 * scale.y)) &&
-               (point.y <= position.y + (size.y / 2 * scale.y));
-    }
-
     void hit(){
-        sprite->setColor(sf::Color::Red);
+        if(invulnerable) return;
+
+        if(--health == 0){
+            dead = true;
+            sprite->setColor(sf::Color(127,127,127));
+            sprite->setRotation(sf::degrees(90));
+            dashing = false;
+        }
+        else
+            sprite->setColor(sf::Color::Red);
+        invulnerable = true;
     }
 };
 
@@ -240,13 +282,39 @@ struct Ghost{
         anim_upd.update(delta);
         if(player_hit(p))
             p.hit();
+        if(player_hurt(p)){
+            die();
+            p.successfull_dash();
+        }
     }
 
     bool player_hit(Player &p){
-        return (p.is_inside({position.x - (size.x / 2 * scale.x), position.y})) ||
-               (p.is_inside({position.x + (size.x / 2 * scale.x), position.y})) ||
-               (p.is_inside({position.x, position.y + (size.y / 2 * scale.y)})) ||
-               (p.is_inside({position.x, position.y - (size.y / 2 * scale.y)}));
+        return (((position.x + (size.x / 2 * scale.x)) >= (p.position.x - (p.size.x / 2 * p.scale.x))) &&
+                ((position.x - (size.x / 2 * scale.x)) <= (p.position.x + (p.size.x / 2 * p.scale.x))) &&
+                ((position.y + (size.y / 2 * scale.y)) >= (p.position.y - (p.size.y / 2 * p.scale.y))) &&
+                ((position.y - (size.y / 2 * scale.y)) <= (p.position.y + (p.size.y / 2 * p.scale.y))));
+    }
+
+    bool player_hurt(Player &p){
+        if(!p.attack) return false;
+        return (edgeIntersects(p.position, p.aftr_img.position, {position.x - (size.x / 2 * scale.x), position.y - (size.y / 2 * scale.y)}, {position.x + (size.x / 2 * scale.x), position.y - (size.y / 2 * scale.y)}) ||
+                edgeIntersects(p.position, p.aftr_img.position, {position.x + (size.x / 2 * scale.x), position.y - (size.y / 2 * scale.y)}, {position.x + (size.x / 2 * scale.x), position.y + (size.y / 2 * scale.y)}) ||
+                edgeIntersects(p.position, p.aftr_img.position, {position.x + (size.x / 2 * scale.x), position.y + (size.y / 2 * scale.y)}, {position.x - (size.x / 2 * scale.x), position.y + (size.y / 2 * scale.y)}) ||
+                edgeIntersects(p.position, p.aftr_img.position, {position.x - (size.x / 2 * scale.x), position.y + (size.y / 2 * scale.y)}, {position.x - (size.x / 2 * scale.x), position.y - (size.y / 2 * scale.y)}));
+    }
+
+    bool edgeIntersects(const sf::Vector2f& A, const sf::Vector2f& B, const sf::Vector2f& C, const sf::Vector2f& D) {
+        float det = (B.x - A.x) * (D.y - C.y) - (B.y - A.y) * (D.x - C.x);
+        if (det == 0) return false; // Parallel lines
+
+        float t = ((C.x - A.x) * (D.y - C.y) - (C.y - A.y) * (D.x - C.x)) / det;
+        float u = ((C.x - A.x) * (B.y - A.y) - (C.y - A.y) * (B.x - A.x)) / det;
+
+        return (t >= 0 && t <= 1 && u >= 0 && u <= 1);
+    };
+
+    void die(){
+        sprite->setColor(sf::Color::Red);
     }
 };
 
@@ -259,24 +327,49 @@ struct State{
     bool move_down;
     bool move_right;
 
+    sf::Texture heart_texture;
+
     State(){
         move_up = false;
         move_left = false;
         move_down = false;
         move_right = false;
+
+        if(!heart_texture.loadFromFile(heart_sprite))
+            exit(-1);
     }
 
     void draw(sf::RenderWindow& window){
         player.draw(window);
         ghost.draw(window);
+        draw_health(window);
     }
 
     void update(float delta){
+        if(player.dead) return;
+
         sf::Vector2f movement(move_right - move_left, move_down - move_up);
         if(movement.length() != 0)
             movement = movement.normalized();
         player.update(delta, movement);
         ghost.update(delta, player);
+    }
+
+    void draw_health(sf::RenderWindow& window){
+        sf::Sprite heart(heart_texture);
+        heart.setScale(player_scale);
+
+        switch(player.health){
+            case 3:
+                heart.setPosition({310, 10});
+                window.draw(heart);
+            case 2:
+                heart.setPosition({160, 10});
+                window.draw(heart);
+            case 1:
+                heart.setPosition({10, 10});
+                window.draw(heart);
+        }
     }
 };
 
