@@ -289,10 +289,11 @@ struct Ghost{
     }
 
     bool player_hit(Player &p){
-        return (((position.x + (size.x / 2 * scale.x)) >= (p.position.x - (p.size.x / 2 * p.scale.x))) &&
+        /*return (((position.x + (size.x / 2 * scale.x)) >= (p.position.x - (p.size.x / 2 * p.scale.x))) &&
                 ((position.x - (size.x / 2 * scale.x)) <= (p.position.x + (p.size.x / 2 * p.scale.x))) &&
                 ((position.y + (size.y / 2 * scale.y)) >= (p.position.y - (p.size.y / 2 * p.scale.y))) &&
-                ((position.y - (size.y / 2 * scale.y)) <= (p.position.y + (p.size.y / 2 * p.scale.y))));
+                ((position.y - (size.y / 2 * scale.y)) <= (p.position.y + (p.size.y / 2 * p.scale.y))));*/
+        return dist(position, p.position) < 150;
     }
 
     bool player_hurt(Player &p){
