@@ -1,12 +1,13 @@
 #include <SFML/Graphics.hpp>
 #include <cmath>
+#include <list>
 
 const unsigned window_width = 1280;
 const unsigned window_height = 720;
 const sf::Vector2f player_scale = {10, 10};
-const char* player_sheet = "resources/full_sheet_outlined_3.png";
-const char* ghost_sheet = "resources/ghost sheet outlined-white.png";
-const char* heart_sprite = "resources/heart.png";
+const char* player_sheet = "../../resources/full_sheet_outlined_3.png";
+const char* ghost_sheet = "../../resources/ghost sheet outlined-white.png";
+const char* heart_sprite = "../../resources/heart.png";
 const unsigned h_sheet = 4;
 const unsigned v_sheet = 8;
 const sf::Vector2i player_sprite_size = {14, 15};
@@ -248,9 +249,6 @@ struct Ghost{
     Animation_Updater anim_upd;
     float speed;
 
-    Ghost* prev_ghost;
-    Ghost* next_ghost;
-
     Ghost(){
         position = {window_width / 3, window_height / 3};
         origin = {static_cast<float>(ghost_sprite_size.x / 2), static_cast<float>(ghost_sprite_size.y / 2)};
@@ -265,9 +263,6 @@ struct Ghost{
         sprite->setScale(scale);
 
         anim_upd = Animation_Updater(animation_fps_period, h_sheet, size);
-
-        prev_ghost = nullptr;
-        next_ghost = nullptr;
     }
 
     void draw(sf::RenderWindow& window){
@@ -277,7 +272,7 @@ struct Ghost{
         window.draw(*sprite);
     }
 
-    void update(float delta, Player& p){
+    bool update(float delta, Player& p){
         position += sf::Vector2f(speed, angle(position, p.position)) * delta;
         anim_upd.update(delta);
         if(player_hit(p))
@@ -285,7 +280,9 @@ struct Ghost{
         if(player_hurt(p)){
             die();
             p.successfull_dash();
+            return true;
         }
+        return false;
     }
 
     bool player_hit(Player &p){
@@ -315,13 +312,55 @@ struct Ghost{
     };
 
     void die(){
-        sprite->setColor(sf::Color::Red);
+        free(sprite);
+    }
+};
+
+struct Horde{
+    std::list<Ghost*> horde;
+    float time_elapsed;
+
+    Horde(){
+        time_elapsed = 0;
+    }
+
+    void update(float delta, Player &p){
+        time_elapsed += delta;
+        if(time_elapsed >= 5){
+            time_elapsed -= 5;
+            horde.push_back(new Ghost);
+        }
+
+        /*for(Ghost* g: horde){
+            if(g->update(delta, p)){
+                //free(g);
+                horde.remove(g);
+            }
+        }*/
+
+        /*std::list<Ghost*>::iterator i = horde.begin();
+        while (i != horde.end()){
+            if ((*i)->update(delta, p)){
+                horde.erase(i);
+            }
+            i++;
+        }*/
+
+        for(std::list<Ghost*>::iterator g = horde.begin(); g != horde.end(); g++){
+            if((*g)->update(delta, p))
+                g = horde.erase(g);
+        }
+    }
+
+    void draw(sf::RenderWindow& window){
+        for(Ghost* g: horde)
+            g->draw(window);
     }
 };
 
 struct State{
     Player player;
-    Ghost ghost;
+    Horde horde;
 
     bool move_up;
     bool move_left;
@@ -342,7 +381,7 @@ struct State{
 
     void draw(sf::RenderWindow& window){
         player.draw(window);
-        ghost.draw(window);
+        horde.draw(window);
         draw_health(window);
     }
 
@@ -353,7 +392,7 @@ struct State{
         if(movement.length() != 0)
             movement = movement.normalized();
         player.update(delta, movement);
-        ghost.update(delta, player);
+        horde.update(delta, player);
     }
 
     void draw_health(sf::RenderWindow& window){
