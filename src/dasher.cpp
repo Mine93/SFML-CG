@@ -1,13 +1,20 @@
 #include <SFML/Graphics.hpp>
-#include <cmath>
-#include <list>
+
+#ifdef _WIN32
+    const char* player_sheet = "../../../resources/full_sheet_outlined_3.png";
+    const char* ghost_sheet = "../../../resources/ghost sheet outlined-white.png";
+    const char* heart_sprite = "../../../resources/heart.png";
+#else
+    #include <list>
+    #include <cmath>
+    const char* player_sheet = "../../resources/full_sheet_outlined_3.png";
+    const char* ghost_sheet = "../../resources/ghost sheet outlined-white.png";
+    const char* heart_sprite = "../../resources/heart.png";
+#endif
 
 const unsigned window_width = 1280;
 const unsigned window_height = 720;
 const sf::Vector2f player_scale = {10, 10};
-const char* player_sheet = "../../resources/full_sheet_outlined_3.png";
-const char* ghost_sheet = "../../resources/ghost sheet outlined-white.png";
-const char* heart_sprite = "../../resources/heart.png";
 const unsigned h_sheet = 4;
 const unsigned v_sheet = 8;
 const sf::Vector2i player_sprite_size = {14, 15};
@@ -92,6 +99,7 @@ struct Player{
     bool dead;
     bool attack;
     bool prev_attack;
+    bool success;
 
     Animation_Updater anim_upd;
     After_Image aftr_img;
@@ -121,6 +129,7 @@ struct Player{
         dead = false;
         attack = false;
         prev_attack = false;
+        success = false;
 
         health = 3;
         inv_window = 0;
@@ -138,6 +147,10 @@ struct Player{
     }
 
     void update(float delta, sf::Vector2f movement){
+        if(success){
+            success = false;
+            successfull_dash();
+        }
         move_and_collide(movement, delta);
 
         if(attack){
@@ -279,7 +292,7 @@ struct Ghost{
             p.hit();
         if(player_hurt(p)){
             die();
-            p.successfull_dash();
+            p.success = true;
             return true;
         }
         return false;
@@ -368,8 +381,8 @@ struct State{
     }
 
     void draw(sf::RenderWindow& window){
-        player.draw(window);
         horde.draw(window);
+        player.draw(window);
         draw_health(window);
     }
 
