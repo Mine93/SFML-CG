@@ -331,24 +331,12 @@ struct Horde{
             horde.push_back(new Ghost);
         }
 
-        /*for(Ghost* g: horde){
-            if(g->update(delta, p)){
-                //free(g);
-                horde.remove(g);
-            }
-        }*/
-
-        /*std::list<Ghost*>::iterator i = horde.begin();
-        while (i != horde.end()){
-            if ((*i)->update(delta, p)){
-                horde.erase(i);
-            }
-            i++;
-        }*/
-
-        for(std::list<Ghost*>::iterator g = horde.begin(); g != horde.end(); g++){
+        std::list<Ghost*>::iterator g = horde.begin();
+        while(g != horde.end()){
             if((*g)->update(delta, p))
                 g = horde.erase(g);
+            else
+                g++;
         }
     }
 
