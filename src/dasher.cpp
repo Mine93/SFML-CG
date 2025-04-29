@@ -158,7 +158,7 @@ struct Player{
 
         if(invulnerable){
             inv_window += delta;
-            if(inv_window >= 1){
+            if(inv_window >= 1.5){
                 inv_window = 0;
                 invulnerable = false;
                 sprite->setColor(sf::Color::White);
