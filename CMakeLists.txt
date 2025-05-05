@@ -12,6 +12,10 @@ FetchContent_Declare(SFML
     SYSTEM)
 FetchContent_MakeAvailable(SFML)
 
-add_executable(dasher src/dasher.cpp)
+set(SOURCE_FILES
+    src/dasher.cpp
+    src/entities.cpp)
+
+add_executable(dasher ${SOURCE_FILES})
 target_compile_features(dasher PRIVATE cxx_std_17)
 target_link_libraries(dasher PRIVATE SFML::Graphics)
