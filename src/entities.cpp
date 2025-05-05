@@ -3,7 +3,6 @@
 
 #ifndef _WIN32
     #include <cmath>
-    #include <list>
 #endif
 
 float dist(sf::Vector2f p1, sf::Vector2f p2){
@@ -300,7 +299,7 @@ void Horde::draw(sf::RenderWindow& window){
 State::State():
     player(directions),
     horde(&player){
-        if(!heart.loadFromFile(heart_sprite))
+        if(!heart_texture.loadFromFile(heart_sprite))
             exit(-1);
 }
 
@@ -318,7 +317,7 @@ void State::draw(sf::RenderWindow& window){
 }
 
 void State::draw_health(sf::RenderWindow& window){
-    sf::Sprite heart(heart);
+    sf::Sprite heart(heart_texture);
     heart.setScale(player_scale);
 
     switch(player.health){

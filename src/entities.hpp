@@ -1,5 +1,9 @@
 #include <SFML/Graphics.hpp>
 
+#ifndef _WIN32
+    #include <list>
+#endif
+
 struct Updatable{
     virtual bool update(float delta) = 0;
     virtual void draw(sf::RenderWindow& window) = 0;
@@ -106,7 +110,7 @@ struct State: Updatable{
     Player player;
     Horde horde;
     bool directions[4] = {false, false, false, false};
-    sf::Texture heart;
+    sf::Texture heart_texture;
 
     State();
 
