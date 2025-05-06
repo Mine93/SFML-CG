@@ -33,13 +33,13 @@ struct Entity: Updatable{
     sf::Texture texture;
     sf::Sprite sprite;
     Animation_Updater anim;
+    unsigned sprite_direction;
+    bool moving;
 
-    Entity(sf::Vector2f position, sf::Vector2f origin, const sf::Vector2i sprite_size, const sf::Vector2f scale, const char* texture_path, const float animation_period, const unsigned n_frames);
+    Entity(sf::Vector2f position, sf::Vector2f origin, const sf::Vector2i sprite_size, const sf::Vector2f scale, const char* texture_path, const float animation_period, const unsigned n_frames, unsigned sprite_direction);
 
-    virtual bool update(float delta) = 0;
-    virtual void draw(sf::RenderWindow& window) = 0;
-
-    sf::Texture& load_texture(const char* texture_path);
+    bool update(float delta) override;
+    void draw(sf::RenderWindow& window) override;
 };
 
 struct After_Image: Updatable{
@@ -56,8 +56,6 @@ struct After_Image: Updatable{
 
 struct Player: Entity{
     float speed;
-    unsigned sprite_direction;
-    bool moving;
     bool dashing;
     bool invulnerable;
     float inv_window;
@@ -69,7 +67,7 @@ struct Player: Entity{
     unsigned health;
     bool* directions;
 
-    Player(bool* directions);
+    Player(bool directions[4]);
 
     bool update(float delta) override;
     void draw(sf::RenderWindow& window) override;

@@ -23,27 +23,32 @@ bool edgeIntersects(const sf::Vector2f& A, const sf::Vector2f& B, const sf::Vect
     return (t >= 0 && t <= 1 && u >= 0 && u <= 1);
 }
 
-Entity::Entity(sf::Vector2f position, sf::Vector2f origin, const sf::Vector2i sprite_size, const sf::Vector2f scale, const char* texture_path, const float animation_period, const unsigned n_frames):
+Entity::Entity(sf::Vector2f position, sf::Vector2f origin, const sf::Vector2i sprite_size, const sf::Vector2f scale, const char* texture_path, const float animation_period, const unsigned n_frames, unsigned sprite_direction):
     position(position),
     origin(origin),
     sprite_size(sprite_size),
     scale(scale),
     size({sprite_size.x * scale.x, sprite_size.y * scale.y}),
-    sprite(load_texture(texture_path)),
-    anim(animation_period, n_frames, sprite_size){
+    sprite(texture),
+    anim(animation_period, n_frames, sprite_size),
+    sprite_direction(sprite_direction),
+    moving(false){
+        if(!texture.loadFromFile(texture_path))
+            exit(-1);
         sprite.setOrigin(origin);
         sprite.setScale(scale);
 }
 
-sf::Texture& Entity::load_texture(const char* texture_path){
-    if(!texture.loadFromFile(texture_path))
-        exit(-1);
-    return texture;
+bool Entity::update(float delta){
+    return anim.update(delta);
 }
 
-/*Entity::~Entity(){
-    //free(sprite);
-}*/
+void Entity::draw(sf::RenderWindow& window){
+    sprite.setPosition(position);
+    sprite.setTextureRect(anim.get_sprite(sprite_direction, moving));
+
+    window.draw(sprite);
+}
 
 Animation_Updater::Animation_Updater(float period, unsigned max, sf::Vector2i sprite_size):
         time_elapsed(0),
@@ -69,11 +74,9 @@ sf::IntRect Animation_Updater::get_sprite(int direction, bool moving){
 }
 
 //Player::Player(){}
-Player::Player(bool* directions):
-    Entity({window_width / 2, window_height / 2}, {static_cast<float>(player_sprite_size.x / 2), static_cast<float>(player_sprite_size.y / 2)}, player_sprite_size, player_scale, player_sheet, animation_fps_period, h_sheet),
+Player::Player(bool directions[4]):
+    Entity({window_width / 2, window_height / 2}, {static_cast<float>(player_sprite_size.x / 2), static_cast<float>(player_sprite_size.y / 2)}, player_sprite_size, player_scale, player_sheet, animation_fps_period, h_sheet, 2),
     speed(player_speed),
-    sprite_direction(2),
-    moving(false),
     dashing(false),
     invulnerable(false),
     dead(false),
@@ -88,6 +91,8 @@ Player::Player(bool* directions):
 //void Player::update(float delta){}
 bool Player::update(float delta){
     if(dead) return true;
+
+    Entity::update(delta);
 
     if(success){
         success = false;
@@ -114,7 +119,6 @@ bool Player::update(float delta){
     else if(movement.length() == 0 && moving == true)
         moving = false;
 
-    anim.update(delta);
 
     if(invulnerable){
         inv_window += delta;
@@ -133,10 +137,7 @@ void Player::draw(sf::RenderWindow& window){
         aftr.draw(window);
     }
 
-    sprite.setTextureRect(anim.get_sprite(sprite_direction, moving));
-    sprite.setPosition(position);
-
-    window.draw(sprite);
+    Entity::draw(window);
 }
 
 void Player::calculate_direction(sf::Vector2f vec){
@@ -196,7 +197,7 @@ void Player::hit(){
 
     if(--health == 0){
         dead = true;
-        sprite.setColor(sf::Color(127,127,127));
+        //sprite.setColor(sf::Color(127,127,127));
         sprite.setRotation(sf::degrees(90));
         dashing = false;
     }
@@ -227,28 +228,29 @@ void After_Image::set_start(sf::IntRect rect, sf::Vector2f position){
 
 //Ghost::Ghost(){}
 Ghost::Ghost(sf::Vector2f position,Player* player):
-    Entity(position, {static_cast<float>(ghost_sprite_size.x / 2), static_cast<float>(ghost_sprite_size.y / 2)}, ghost_sprite_size, player_scale, ghost_sheet, animation_fps_period, h_sheet),
+    Entity(position, {static_cast<float>(ghost_sprite_size.x / 2), static_cast<float>(ghost_sprite_size.y / 2)}, ghost_sprite_size, player_scale, ghost_sheet, animation_fps_period, h_sheet, 0),
     speed(100),
     player(player){}
 
 //void Ghost::update(float delta){}
 bool Ghost::update(float delta){
+    Entity::update(delta);
+
     position += sf::Vector2f(speed, angle(position, player->position)) * delta;
-    anim.update(delta);
+
     if(player_hit(player->position))
         player->hit();
+
     if(player_hurt()){
         player->success = true;
         return true;
     }
+
     return false;
 }
 
 void Ghost::draw(sf::RenderWindow& window){
-    sprite.setPosition(position);
-    sprite.setTextureRect(anim.get_sprite(0, false));
-
-    window.draw(sprite);
+    Entity::draw(window);
 }
 
 bool Ghost::player_hit(sf::Vector2f p_position){
@@ -269,7 +271,9 @@ bool Ghost::player_hurt(){
 
 Horde::Horde(Player* player):
         time_elapsed(0),
-        player(player){}
+        player(player){
+            srand(time(0));
+}
 
 //void Horde::update(float delta){}
 bool Horde::update(float delta){
@@ -283,8 +287,10 @@ bool Horde::update(float delta){
 
     std::list<Ghost*>::iterator g = horde.begin();
     while(g != horde.end()){
-        if((*g)->update(delta))
+        if((*g)->update(delta)){
+            free(*g);
             g = horde.erase(g);
+        }
         else
             g++;
     }

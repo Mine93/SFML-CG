@@ -68,6 +68,7 @@ int main(){
 
     State state;
     sf::Clock delta;
+    sf::Color bg(sf::Color::Black);
 
     while (window.isOpen()){
         window.handleEvents([&window](const sf::Event::Closed&){handle_close(window);},
@@ -75,9 +76,9 @@ int main(){
                             [&state] (const auto& event){handle(event, state);});
 
         if(state.update(delta.restart().asSeconds()))
-            return 0;
+            bg = sf::Color::White;
 
-        window.clear(sf::Color::Black);
+        window.clear(bg);
         state.draw(window);
         window.display();
     }
