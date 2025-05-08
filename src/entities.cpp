@@ -13,12 +13,12 @@ sf::Angle angle(sf::Vector2f p1, sf::Vector2f p2){
     return sf::radians(atan2(p2.y - p1.y, p2.x - p1.x));
 }
 
-bool edgeIntersects(const sf::Vector2f& A, const sf::Vector2f& B, const sf::Vector2f& C, const sf::Vector2f& D) {
-    float det = (B.x - A.x) * (D.y - C.y) - (B.y - A.y) * (D.x - C.x);
+bool edge_intersects(const sf::Vector2f& a, const sf::Vector2f& b, const sf::Vector2f& c, const sf::Vector2f& d) {
+    float det = (b.x - a.x) * (d.y - c.y) - (b.y - a.y) * (d.x - c.x);
     if (det == 0) return false;
 
-    float t = ((C.x - A.x) * (D.y - C.y) - (C.y - A.y) * (D.x - C.x)) / det;
-    float u = ((C.x - A.x) * (B.y - A.y) - (C.y - A.y) * (B.x - A.x)) / det;
+    float t = ((c.x - a.x) * (d.y - c.y) - (c.y - a.y) * (d.x - c.x)) / det;
+    float u = ((c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x)) / det;
 
     return (t >= 0 && t <= 1 && u >= 0 && u <= 1);
 }
@@ -270,10 +270,10 @@ bool Ghost::player_hit(sf::Vector2f p_position){
 
 bool Ghost::player_hurt(){
     if(!player->attack) return false;
-    return (edgeIntersects(player->position, player->aftr.position, {position.x - (sprite_size.x / 2 * scale.x), position.y - (sprite_size.y / 2 * scale.y)}, {position.x + (sprite_size.x / 2 * scale.x), position.y - (sprite_size.y / 2 * scale.y)}) ||
-            edgeIntersects(player->position, player->aftr.position, {position.x + (sprite_size.x / 2 * scale.x), position.y - (sprite_size.y / 2 * scale.y)}, {position.x + (sprite_size.x / 2 * scale.x), position.y + (sprite_size.y / 2 * scale.y)}) ||
-            edgeIntersects(player->position, player->aftr.position, {position.x + (sprite_size.x / 2 * scale.x), position.y + (sprite_size.y / 2 * scale.y)}, {position.x - (sprite_size.x / 2 * scale.x), position.y + (sprite_size.y / 2 * scale.y)}) ||
-            edgeIntersects(player->position, player->aftr.position, {position.x - (sprite_size.x / 2 * scale.x), position.y + (sprite_size.y / 2 * scale.y)}, {position.x - (sprite_size.x / 2 * scale.x), position.y - (sprite_size.y / 2 * scale.y)}));
+    return (edge_intersects(player->position, player->aftr.position, {position.x - (sprite_size.x / 2 * scale.x), position.y - (sprite_size.y / 2 * scale.y)}, {position.x + (sprite_size.x / 2 * scale.x), position.y - (sprite_size.y / 2 * scale.y)}) ||
+            edge_intersects(player->position, player->aftr.position, {position.x + (sprite_size.x / 2 * scale.x), position.y - (sprite_size.y / 2 * scale.y)}, {position.x + (sprite_size.x / 2 * scale.x), position.y + (sprite_size.y / 2 * scale.y)}) ||
+            edge_intersects(player->position, player->aftr.position, {position.x + (sprite_size.x / 2 * scale.x), position.y + (sprite_size.y / 2 * scale.y)}, {position.x - (sprite_size.x / 2 * scale.x), position.y + (sprite_size.y / 2 * scale.y)}) ||
+            edge_intersects(player->position, player->aftr.position, {position.x - (sprite_size.x / 2 * scale.x), position.y + (sprite_size.y / 2 * scale.y)}, {position.x - (sprite_size.x / 2 * scale.x), position.y - (sprite_size.y / 2 * scale.y)}));
 }
 
 Horde::Horde(Player* player):
