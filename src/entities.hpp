@@ -45,13 +45,14 @@ struct Entity: Updatable{
 struct After_Image: Updatable{
     sf::Vector2f position;
     sf::Sprite sprite;
+    unsigned sprite_direction;
 
     After_Image(sf::Vector2f origin, sf::Vector2f size, sf::Texture& texture);
 
     bool update(float delta);
     void draw(sf::RenderWindow& window) override;
 
-    void set_start(sf::IntRect rect, sf::Vector2f position);
+    void set_start(sf::IntRect rect, sf::Vector2f position, unsigned sprite_direction);
 };
 
 struct Player: Entity{
@@ -78,6 +79,7 @@ struct Player: Entity{
     void draw_line(sf::RenderWindow& window);
     void move_and_collide(sf::Vector2f direction, float delta);
     void hit();
+    void successful_dash();
 };
 
 struct Ghost: Entity{

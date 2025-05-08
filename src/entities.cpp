@@ -94,10 +94,7 @@ bool Player::update(float delta){
 
     Entity::update(delta);
 
-    if(success){
-        success = false;
-        position = aftr.position;
-    }
+    successful_dash();
 
     sf::Vector2f movement(directions[0] - directions[1], directions[2] - directions[3]);
     if(movement.length() != 0)
@@ -159,7 +156,7 @@ void Player::start_dash(){
     if(dashing || dead) return;
 
     dashing = true;
-    aftr.set_start(anim.get_sprite(sprite_direction, moving), position);
+    aftr.set_start(anim.get_sprite(sprite_direction, moving), position, sprite_direction);
 }
 
 void Player::stop_dash(){
@@ -199,19 +196,28 @@ void Player::hit(){
         dead = true;
         //sprite.setColor(sf::Color(127,127,127));
         sprite.setRotation(sf::degrees(90));
-        dashing = false;
     }
     else
         sprite.setColor(sf::Color::Red);
+    dashing = false;
     invulnerable = true;
+}
+
+void Player::successful_dash(){
+    if(!success) return;
+
+    success = false;
+    position = aftr.position;
+    sprite_direction = aftr.sprite_direction;
 }
 
 //After_Image::After_Image(){}
 After_Image::After_Image(sf::Vector2f origin, sf::Vector2f size, sf::Texture& texture):
-    sprite(texture){
+    sprite(texture),
+    sprite_direction(0){
         sprite.setScale(size);
         sprite.setOrigin(origin);
-        sprite.setColor(sf::Color(127, 127, 127));
+        //sprite.setColor(sf::Color(127, 127, 127));
 }
 
 bool After_Image::update(float delta){return false;}
@@ -220,10 +226,11 @@ void After_Image::draw(sf::RenderWindow& window){
     window.draw(sprite);
 }
 
-void After_Image::set_start(sf::IntRect rect, sf::Vector2f position){
+void After_Image::set_start(sf::IntRect rect, sf::Vector2f position, unsigned sprite_direction){
     sprite.setTextureRect(rect);
     this->position = position;
     sprite.setPosition(position);
+    this->sprite_direction = sprite_direction;
 }
 
 //Ghost::Ghost(){}
