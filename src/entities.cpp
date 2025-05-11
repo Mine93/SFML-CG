@@ -29,12 +29,11 @@ Entity::Entity(sf::Vector2f position, sf::Vector2f origin, const sf::Vector2i sp
     sprite_size(sprite_size),
     scale(scale),
     size({sprite_size.x * scale.x, sprite_size.y * scale.y}),
+    texture(texture_path),
     sprite(texture),
     anim(animation_period, n_frames, sprite_size),
     sprite_direction(sprite_direction),
     moving(false){
-        if(!texture.loadFromFile(texture_path))
-            exit(-1);
         sprite.setOrigin(origin);
         sprite.setScale(scale);
 }
@@ -83,8 +82,10 @@ Player::Player(bool directions[4]):
     attack(false),
     prev_attack(false),
     success(false),
+    fail(false),
     health(3),
     inv_window(0),
+    fail_window(0),
     directions(directions),
     aftr(origin, scale, texture){}
 
@@ -93,8 +94,6 @@ bool Player::update(float delta){
     if(dead) return true;
 
     Entity::update(delta);
-
-    successful_dash();
 
     sf::Vector2f movement(directions[0] - directions[1], directions[2] - directions[3]);
     if(movement.length() != 0)
@@ -105,6 +104,7 @@ bool Player::update(float delta){
         if(prev_attack){
             attack = false;
             prev_attack = false;
+            successful_dash();
         }
         else
             prev_attack = true;
@@ -116,13 +116,20 @@ bool Player::update(float delta){
     else if(movement.length() == 0 && moving == true)
         moving = false;
 
-
     if(invulnerable){
         inv_window += delta;
         if(inv_window >= 1.5){
             inv_window = 0;
             invulnerable = false;
             sprite.setColor(sf::Color::White);
+        }
+    }
+
+    if(fail){
+        fail_window += delta;
+        if(fail_window >= 1){
+            fail_window = 0;
+            fail = false;
         }
     }
     return false;
@@ -133,6 +140,9 @@ void Player::draw(sf::RenderWindow& window){
         draw_line(window);
         aftr.draw(window);
     }
+
+    if(fail)
+        draw_fail_bar(window);
 
     Entity::draw(window);
 }
@@ -153,14 +163,14 @@ void Player::calculate_direction(sf::Vector2f vec){
 }
 
 void Player::start_dash(){
-    if(dashing || dead) return;
+    if(dashing || dead || fail) return;
 
     dashing = true;
     aftr.set_start(anim.get_sprite(sprite_direction, moving), position, sprite_direction);
 }
 
 void Player::stop_dash(){
-    if(!dashing || dead) return;
+    if(!dashing || dead || fail) return;
 
     dashing = false;
     attack = true;
@@ -199,16 +209,43 @@ void Player::hit(){
     }
     else
         sprite.setColor(sf::Color::Red);
-    dashing = false;
+    
+    if(dashing){
+        dashing = false;
+        fail = true;
+    }
     invulnerable = true;
 }
 
 void Player::successful_dash(){
-    if(!success) return;
+    if(success){
+        success = false;
+        position = aftr.position;
+        sprite_direction = aftr.sprite_direction;
+    }
+    else
+        fail = true;
+}
 
-    success = false;
-    position = aftr.position;
-    sprite_direction = aftr.sprite_direction;
+void Player::heal(){
+    if(health < 3 && !dead)
+        health++;
+}
+
+void Player::draw_fail_bar(sf::RenderWindow& window){
+    sf::RectangleShape ext({150, 20});
+    ext.setOrigin({75,0});
+    ext.setFillColor(sf::Color::Black);
+    ext.setOutlineThickness(-5);
+    ext.setOutlineColor(sf::Color::White);
+    ext.setPosition(position + sf::Vector2f(0, 100));
+    window.draw(ext);
+
+    sf::RectangleShape ent({(150 * fail_window), 20});
+    ent.setOrigin({75,0});
+    ent.setFillColor(sf::Color::White);
+    ent.setPosition(position + sf::Vector2f(0, 100));
+    window.draw(ent);
 }
 
 //After_Image::After_Image(){}
@@ -278,43 +315,73 @@ bool Ghost::player_hurt(){
 
 Horde::Horde(Player* player):
         time_elapsed(0),
+        score(0),
         player(player){
             srand(time(0));
 }
 
 //void Horde::update(float delta){}
 bool Horde::update(float delta){
-    bool ret = false;
+    update_horde(delta);
+    update_hearts();
+    return spawn_enemies(delta);
+}
+
+void Horde::draw(sf::RenderWindow& window){
+    for(Heart* h: hearts)
+        h->draw(window);
+
+    for(Ghost* g: horde)
+        g->draw(window);
+}
+
+bool Horde::spawn_enemies(float delta){
     time_elapsed += delta;
     if(time_elapsed >= 5){
         time_elapsed -= 5;
         horde.push_back(new Ghost(sf::Vector2f(window_width / 2, window_height / 2) + sf::Vector2f(700, sf::degrees(rand() % 360)), player));
-        ret = true;
+        return true;
     }
+    return false;
+}
 
+bool Horde::spawn_hearts(sf::Vector2f position){
+    if(rand() % 3 >= player->health){
+        hearts.push_back(new Heart(player, position));
+        return true;
+    }
+    return false;
+}
+
+void Horde::update_horde(float delta){
     std::list<Ghost*>::iterator g = horde.begin();
     while(g != horde.end()){
         if((*g)->update(delta)){
+            score+=(spawn_hearts((*g)->position))?5:10;
             free(*g);
             g = horde.erase(g);
         }
         else
             g++;
     }
-    return ret;
 }
 
-void Horde::draw(sf::RenderWindow& window){
-    for(Ghost* g: horde)
-        g->draw(window);
+void Horde::update_hearts(){
+    std::list<Heart*>::iterator h = hearts.begin();
+    while(h != hearts.end()){
+        if((*h)->update(0)){
+            free(*h);
+            h = hearts.erase(h);
+        }
+        else
+            h++;
+    }
 }
 
 State::State():
     player(directions),
-    horde(&player){
-        if(!heart_texture.loadFromFile(heart_sprite))
-            exit(-1);
-}
+    horde(&player),
+    heart_texture(heart_sprite){}
 
 bool State::update(float delta){
     if(player.update(delta))
@@ -327,21 +394,52 @@ void State::draw(sf::RenderWindow& window){
     horde.draw(window);
     player.draw(window);
     draw_health(window);
+    display_score(window);
 }
 
 void State::draw_health(sf::RenderWindow& window){
     sf::Sprite heart(heart_texture);
-    heart.setScale(player_scale);
+    heart.setScale({5, 5});
 
     switch(player.health){
         case 3:
-            heart.setPosition({310, 10});
+            heart.setPosition({155, 5});
             window.draw(heart);
         case 2:
-            heart.setPosition({160, 10});
+            heart.setPosition({80, 5});
             window.draw(heart);
         case 1:
-            heart.setPosition({10, 10});
+            heart.setPosition({5, 5});
             window.draw(heart);
     }
+}
+
+void State::display_score(sf::RenderWindow& window){
+    sf::Font font("../../resources/Silkscreen-Regular.ttf");
+    sf::Text score_text(font, std::to_string(horde.score), 70);
+    score_text.setPosition({window_width - 300, -10});
+    window.draw(score_text);
+}
+
+Heart::Heart(Player* player, sf::Vector2f position):
+    position(position),
+    texture(heart_sprite),
+    sprite(texture),
+    player(player){
+        //sprite = sf::Sprite(texture);
+        sprite.setOrigin({7.f, 5.5});
+        sprite.setScale(player_scale);
+        sprite.setPosition(position);
+}
+
+bool Heart::update(float delta){
+    if(dist(position, player->position) < 140){
+        player->heal();
+        return true;
+    }
+    return false;
+}
+
+void Heart::draw(sf::RenderWindow& window){
+    window.draw(sprite);
 }

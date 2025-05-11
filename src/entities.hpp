@@ -49,7 +49,7 @@ struct After_Image: Updatable{
 
     After_Image(sf::Vector2f origin, sf::Vector2f size, sf::Texture& texture);
 
-    bool update(float delta);
+    bool update(float delta) override;
     void draw(sf::RenderWindow& window) override;
 
     void set_start(sf::IntRect rect, sf::Vector2f position, unsigned sprite_direction);
@@ -60,10 +60,12 @@ struct Player: Entity{
     bool dashing;
     bool invulnerable;
     float inv_window;
+    float fail_window;
     bool dead;
     bool attack;
     bool prev_attack;
     bool success;
+    bool fail;
     After_Image aftr;
     unsigned health;
     bool* directions;
@@ -80,6 +82,8 @@ struct Player: Entity{
     void move_and_collide(sf::Vector2f direction, float delta);
     void hit();
     void successful_dash();
+    void heal();
+    void draw_fail_bar(sf::RenderWindow& window);
 };
 
 struct Ghost: Entity{
@@ -95,15 +99,34 @@ struct Ghost: Entity{
     bool player_hurt();
 };
 
+struct Heart: Updatable{
+    sf::Vector2f position;
+    sf::Texture texture;
+    sf::Sprite sprite;
+    Player* player;
+
+    Heart(Player* player, sf::Vector2f position);
+    
+    bool update(float delta) override;
+    void draw(sf::RenderWindow& window) override;
+};
+
 struct Horde: Updatable{
     std::list<Ghost*> horde;
+    std::list<Heart*> hearts;
     float time_elapsed;
+    unsigned long long score;
     Player* player;
 
     Horde(Player* player);
 
     bool update(float delta) override;
     void draw(sf::RenderWindow& window) override;
+
+    bool spawn_enemies(float delta);
+    bool spawn_hearts(sf::Vector2f position);
+    void update_horde(float delta);
+    void update_hearts();
 };
 
 struct State: Updatable{
@@ -118,4 +141,5 @@ struct State: Updatable{
     void draw(sf::RenderWindow& window) override;
 
     void draw_health(sf::RenderWindow& window);
+    void display_score(sf::RenderWindow& window);
 };
