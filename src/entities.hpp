@@ -30,13 +30,12 @@ struct Entity: Updatable{
     sf::Vector2i sprite_size;
     sf::Vector2f scale;
     sf::Vector2f size;
-    sf::Texture texture;
     sf::Sprite sprite;
     Animation_Updater anim;
     unsigned sprite_direction;
     bool moving;
 
-    Entity(sf::Vector2f position, sf::Vector2f origin, const sf::Vector2i sprite_size, const sf::Vector2f scale, const char* texture_path, const float animation_period, const unsigned n_frames, unsigned sprite_direction);
+    Entity(sf::Vector2f position, sf::Vector2f origin, const sf::Vector2i sprite_size, const sf::Vector2f scale, const float animation_period, const unsigned n_frames, unsigned sprite_direction, sf::Texture& texture);
 
     bool update(float delta) override;
     void draw(sf::RenderWindow& window) override;
@@ -70,7 +69,7 @@ struct Player: Entity{
     unsigned health;
     bool* directions;
 
-    Player(bool directions[4]);
+    Player(bool directions[4], sf::Texture& texture);
 
     bool update(float delta) override;
     void draw(sf::RenderWindow& window) override;
@@ -90,7 +89,7 @@ struct Ghost: Entity{
     float speed;
     Player* player;
 
-    Ghost(sf::Vector2f position, Player* player);
+    Ghost(sf::Vector2f position, Player* player, sf::Texture& texture);
 
     bool update(float delta) override;
     void draw(sf::RenderWindow& window) override;
@@ -101,11 +100,11 @@ struct Ghost: Entity{
 
 struct Heart: Updatable{
     sf::Vector2f position;
-    sf::Texture texture;
     sf::Sprite sprite;
     Player* player;
+    Animation_Updater anim;
 
-    Heart(Player* player, sf::Vector2f position);
+    Heart(Player* player, sf::Vector2f position, sf::Texture& texture);
     
     bool update(float delta) override;
     void draw(sf::RenderWindow& window) override;
@@ -117,6 +116,8 @@ struct Horde: Updatable{
     float time_elapsed;
     unsigned long long score;
     Player* player;
+    sf::Texture ghost_texture;
+    sf::Texture heart_texture;
 
     Horde(Player* player);
 
@@ -126,14 +127,15 @@ struct Horde: Updatable{
     bool spawn_enemies(float delta);
     bool spawn_hearts(sf::Vector2f position);
     void update_horde(float delta);
-    void update_hearts();
+    void update_hearts(float delta);
 };
 
 struct State: Updatable{
+    sf::Texture player_texture;
+    sf::Texture heart_texture;
     Player player;
     Horde horde;
     bool directions[4] = {false, false, false, false};
-    sf::Texture heart_texture;
 
     State();
 

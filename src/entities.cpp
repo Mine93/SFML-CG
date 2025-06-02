@@ -23,13 +23,12 @@ bool edge_intersects(const sf::Vector2f& a, const sf::Vector2f& b, const sf::Vec
     return (t >= 0 && t <= 1 && u >= 0 && u <= 1);
 }
 
-Entity::Entity(sf::Vector2f position, sf::Vector2f origin, const sf::Vector2i sprite_size, const sf::Vector2f scale, const char* texture_path, const float animation_period, const unsigned n_frames, unsigned sprite_direction):
+Entity::Entity(sf::Vector2f position, sf::Vector2f origin, const sf::Vector2i sprite_size, const sf::Vector2f scale, const float animation_period, const unsigned n_frames, unsigned sprite_direction, sf::Texture& texture):
     position(position),
     origin(origin),
     sprite_size(sprite_size),
     scale(scale),
     size({sprite_size.x * scale.x, sprite_size.y * scale.y}),
-    texture(texture_path),
     sprite(texture),
     anim(animation_period, n_frames, sprite_size),
     sprite_direction(sprite_direction),
@@ -73,8 +72,8 @@ sf::IntRect Animation_Updater::get_sprite(int direction, bool moving){
 }
 
 //Player::Player(){}
-Player::Player(bool directions[4]):
-    Entity({window_width / 2, window_height / 2}, {static_cast<float>(player_sprite_size.x / 2), static_cast<float>(player_sprite_size.y / 2)}, player_sprite_size, player_scale, player_sheet, animation_fps_period, h_sheet, 2),
+Player::Player(bool directions[4], sf::Texture& texture):
+    Entity(sf::Vector2f(window_width / 2, window_height / 2), {static_cast<float>(player_sprite_size.x / 2), static_cast<float>(player_sprite_size.y / 2)}, player_sprite_size, player_scale, animation_fps_period, h_sheet, 2, texture),
     speed(player_speed),
     dashing(false),
     invulnerable(false),
@@ -271,8 +270,8 @@ void After_Image::set_start(sf::IntRect rect, sf::Vector2f position, unsigned sp
 }
 
 //Ghost::Ghost(){}
-Ghost::Ghost(sf::Vector2f position,Player* player):
-    Entity(position, {static_cast<float>(ghost_sprite_size.x / 2), static_cast<float>(ghost_sprite_size.y / 2)}, ghost_sprite_size, player_scale, ghost_sheet, animation_fps_period, h_sheet, 0),
+Ghost::Ghost(sf::Vector2f position,Player* player, sf::Texture& texture):
+    Entity(position, {static_cast<float>(ghost_sprite_size.x / 2), static_cast<float>(ghost_sprite_size.y / 2)}, ghost_sprite_size, player_scale, animation_fps_period, h_sheet, 0, texture),
     speed(100),
     player(player){}
 
@@ -316,14 +315,16 @@ bool Ghost::player_hurt(){
 Horde::Horde(Player* player):
         time_elapsed(0),
         score(0),
-        player(player){
+        player(player),
+        ghost_texture(ghost_sheet),
+        heart_texture(animated_heart){
             srand(time(0));
 }
 
 //void Horde::update(float delta){}
 bool Horde::update(float delta){
     update_horde(delta);
-    update_hearts();
+    update_hearts(delta);
     return spawn_enemies(delta);
 }
 
@@ -339,7 +340,7 @@ bool Horde::spawn_enemies(float delta){
     time_elapsed += delta;
     if(time_elapsed >= 5){
         time_elapsed -= 5;
-        horde.push_back(new Ghost(sf::Vector2f(window_width / 2, window_height / 2) + sf::Vector2f(700, sf::degrees(rand() % 360)), player));
+        horde.push_back(new Ghost(sf::Vector2f(window_width / 2, window_height / 2) + sf::Vector2f(700, sf::degrees(rand() % 360)), player, ghost_texture));
         return true;
     }
     return false;
@@ -347,7 +348,7 @@ bool Horde::spawn_enemies(float delta){
 
 bool Horde::spawn_hearts(sf::Vector2f position){
     if(rand() % 3 >= player->health){
-        hearts.push_back(new Heart(player, position));
+        hearts.push_back(new Heart(player, position, heart_texture));
         return true;
     }
     return false;
@@ -357,7 +358,7 @@ void Horde::update_horde(float delta){
     std::list<Ghost*>::iterator g = horde.begin();
     while(g != horde.end()){
         if((*g)->update(delta)){
-            score+=(spawn_hearts((*g)->position))?5:10;
+            score += (spawn_hearts((*g)->position)) ? 5 : 10;
             free(*g);
             g = horde.erase(g);
         }
@@ -366,10 +367,10 @@ void Horde::update_horde(float delta){
     }
 }
 
-void Horde::update_hearts(){
+void Horde::update_hearts(float delta){
     std::list<Heart*>::iterator h = hearts.begin();
     while(h != hearts.end()){
-        if((*h)->update(0)){
+        if((*h)->update(delta)){
             free(*h);
             h = hearts.erase(h);
         }
@@ -379,9 +380,10 @@ void Horde::update_hearts(){
 }
 
 State::State():
-    player(directions),
-    horde(&player),
-    heart_texture(heart_sprite){}
+    player_texture(player_sheet),
+    heart_texture(heart_sprite),
+    player(directions, player_texture),
+    horde(&player){}
 
 bool State::update(float delta){
     if(player.update(delta))
@@ -415,24 +417,24 @@ void State::draw_health(sf::RenderWindow& window){
 }
 
 void State::display_score(sf::RenderWindow& window){
-    sf::Font font("../../resources/Silkscreen-Regular.ttf");
+    sf::Font font(font_path);
     sf::Text score_text(font, std::to_string(horde.score), 70);
     score_text.setPosition({window_width - 300, -10});
     window.draw(score_text);
 }
 
-Heart::Heart(Player* player, sf::Vector2f position):
+Heart::Heart(Player* player, sf::Vector2f position, sf::Texture& texture):
     position(position),
-    texture(heart_sprite),
     sprite(texture),
-    player(player){
-        //sprite = sf::Sprite(texture);
-        sprite.setOrigin({7.f, 5.5});
+    player(player),
+    anim(animation_fps_period, h_sheet, heart_sprite_size){
+        sprite.setOrigin(sf::Vector2f(heart_sprite_size.x / 2, heart_sprite_size.y / 2));
         sprite.setScale(player_scale);
         sprite.setPosition(position);
 }
 
 bool Heart::update(float delta){
+    anim.update(delta);
     if(dist(position, player->position) < 140){
         player->heal();
         return true;
@@ -441,5 +443,6 @@ bool Heart::update(float delta){
 }
 
 void Heart::draw(sf::RenderWindow& window){
+    sprite.setTextureRect(anim.get_sprite(0, false));
     window.draw(sprite);
 }
