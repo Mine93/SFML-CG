@@ -6,23 +6,15 @@ void handle_close (sf::RenderWindow& window){
 }
 
 void handle_resize (const sf::Event::Resized& resized, sf::RenderWindow& window){
-    //sf::FloatRect visibleArea({0.f, 0.f}, sf::Vector2f(resized.size));
-    //window.setView(sf::View(visibleArea));
+    /*sf::Vector2u new_size(100, 100);
 
-    float screenWidth = 1280.f;
-    float screenHeight = 720.f;
-    sf::Vector2u size = resized.size;
-    float  heightRatio = screenHeight / screenWidth;
-    float  widthRatio = screenWidth / screenHeight;
-    if (size.y * widthRatio <= size.x)
-    {
-        size.x = size.y * widthRatio;
-    }
-    else if (size.x * heightRatio <= size.y)
-    {
-        size.y = size.x * heightRatio;
-    }
-    window.setSize(size);
+    if(resized.size.x != window.getSize().x)
+        new_size = sf::Vector2u(resized.size.x, resized.size.x * 9.f / 16.f);
+    else if(resized.size.y != window.getSize().y)
+        new_size = sf::Vector2u(resized.size.y * 16.f / 9.f, resized.size.y);
+    window.setSize(new_size);*/
+
+    window.setSize(sf::Vector2u(resized.size.x, resized.size.x * 9.f / 16.f));
 }
 
 void handle(const sf::Event::KeyPressed &KeyPressed, State &state){
@@ -43,6 +35,8 @@ void handle(const sf::Event::KeyPressed &KeyPressed, State &state){
 
     if(KeyPressed.code == sf::Keyboard::Key::LShift)
         state.player.start_dash();
+    if(KeyPressed.code == sf::Keyboard::Key::Space)
+        state.restart();
 }
 
 void handle(const sf::Event::KeyReleased &KeyReleased, State &state){
@@ -77,9 +71,9 @@ template <typename T>
 void handle(const T& event, State& state){}
 
 int main(){
-    sf::ContextSettings settings;
-    settings.antiAliasingLevel = 16;
-    sf::RenderWindow window(sf::VideoMode ({1280, 720}), "Dasher", sf::Style::Default, sf::State::Windowed, settings);
+    //sf::ContextSettings settings;
+    //settings.antiAliasingLevel = 16;
+    sf::RenderWindow window(sf::VideoMode ({1280, 720}), "Dasher");
     window.setVerticalSyncEnabled(true);
     //window.setFramerateLimit(1);
 
@@ -92,8 +86,7 @@ int main(){
                             [&window](const sf::Event::Resized& event){handle_resize(event, window);},
                             [&state] (const auto& event){handle(event, state);});
 
-        if(state.update(delta.restart().asSeconds()))
-            bg = sf::Color::White;
+        bg = (state.update(delta.restart().asSeconds()))? sf::Color::White: sf::Color::Black;
 
         window.clear(bg);
         state.draw(window);

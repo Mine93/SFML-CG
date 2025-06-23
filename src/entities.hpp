@@ -1,4 +1,6 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
+#include <fstream>
 
 #ifndef _WIN32
     #include <list>
@@ -68,8 +70,10 @@ struct Player: Entity{
     After_Image aftr;
     unsigned health;
     bool* directions;
+    sf::Vector2u screen_size;
+    sf::Sound hit_sound;
 
-    Player(bool directions[4], sf::Texture& texture);
+    Player(bool directions[4], sf::Texture& texture, sf::SoundBuffer& hit_buffer);
 
     bool update(float delta) override;
     void draw(sf::RenderWindow& window) override;
@@ -103,6 +107,7 @@ struct Heart: Updatable{
     sf::Sprite sprite;
     Player* player;
     Animation_Updater anim;
+    float scale;
 
     Heart(Player* player, sf::Vector2f position, sf::Texture& texture);
     
@@ -111,13 +116,18 @@ struct Heart: Updatable{
 };
 
 struct Horde: Updatable{
-    std::list<Ghost*> horde;
-    std::list<Heart*> hearts;
+    std::list<Ghost> horde;
+    std::list<Heart> hearts;
+    sf::Vector2f screen_center;
     float time_elapsed;
     unsigned long long score;
     Player* player;
     sf::Texture ghost_texture;
     sf::Texture heart_texture;
+    sf::SoundBuffer hit_buffer;
+    sf::Sound hit_sound;
+    sf::SoundBuffer pickup_buffer;
+    sf::Sound pickup_sound;
 
     Horde(Player* player);
 
@@ -128,14 +138,28 @@ struct Horde: Updatable{
     bool spawn_hearts(sf::Vector2f position);
     void update_horde(float delta);
     void update_hearts(float delta);
+    unsigned spawn_interval();
+    void restart(Player* player);
 };
 
 struct State: Updatable{
     sf::Texture player_texture;
     sf::Texture heart_texture;
+    sf::Texture backgournd_texture;
+    sf::Texture gameover_texture;
+    sf::Sprite gameover;
+    sf::Sprite heart;
+    sf::Font score_font;
+    sf::SoundBuffer hit_buffer;
     Player player;
     Horde horde;
     bool directions[4] = {false, false, false, false};
+    std::fstream score_file;
+    unsigned long long high_score;
+    bool game_over;
+    sf::Music ost;
+    sf::Music defeat_ost;
+    
 
     State();
 
@@ -144,4 +168,7 @@ struct State: Updatable{
 
     void draw_health(sf::RenderWindow& window);
     void display_score(sf::RenderWindow& window);
+    void draw_background(sf::RenderWindow& window);
+    void draw_gameover(sf::RenderWindow& window);
+    void restart();
 };

@@ -18,4 +18,4 @@ set(SOURCE_FILES
 
 add_executable(dasher ${SOURCE_FILES})
 target_compile_features(dasher PRIVATE cxx_std_17)
-target_link_libraries(dasher PRIVATE SFML::Graphics)
+target_link_libraries(dasher PRIVATE SFML::Graphics SFML::Audio)
