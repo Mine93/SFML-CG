@@ -1,0 +1,2 @@
+Qui ho iniziato il processo di pulizia del codice, rimuovendo le allocazioni dinamiche delle struct,
+in più ho aggiunto la collisione del Player con i bordi dello schermo tramite la funzione move_and_collide.
