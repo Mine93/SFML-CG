@@ -433,7 +433,16 @@ State::State():
         gameover.setPosition(sf::Vector2f(window_width / 2, window_height / 2));
 
         std::string line;
-        high_score = std::getline(score_file, line)? stoi(line): 0;
+        if(std::getline(score_file, line))
+            try{
+                high_score = stoull(line);
+            }
+            catch(...){
+                high_score = 0;
+            }
+        else
+            high_score = 0;
+
         score_file.close();
         ost.setLooping(true);
         ost.setVolume(volume);
